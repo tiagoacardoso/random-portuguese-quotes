@@ -63,7 +63,7 @@ func main() {
 			randIndex := rand.Intn(len(messages))
 
 			_, _, err := api.PostMessage(
-				s.ChannelName,
+				s.ChannelID,
 				slack.MsgOptionText(messages[randIndex], false),
 				slack.MsgOptionAttachments(slack.Attachment{}),
 			)
@@ -71,7 +71,7 @@ func main() {
 				log.Println(err)
 				return
 			}
-			log.Println("Message successfully sent to channel " + s.ChannelName)
+			log.Println("Message successfully sent to channel " + s.ChannelID)
 		default:
 			log.Println("Command not found...")
 			return
