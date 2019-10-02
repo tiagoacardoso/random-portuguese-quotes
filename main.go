@@ -85,7 +85,7 @@ func main() {
 
 	fmt.Println("[INFO] Server listening")
 
-	port := os.Getenv("SERVER_PORT")
+	port := os.Getenv("PORT")
 	if len(port) == 0 {
 		port = "3000"
 	}
