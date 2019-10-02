@@ -1,0 +1,5 @@
+deploy:
+  provider: script
+  script: cat messages.json | python -m json.tool  >> /dev/null && exit 0 || exit 1
+   on:
+      branch: master
