@@ -34,6 +34,11 @@ func main() {
 	flag.StringVar(&signingSecret, "secret", slackSigningKey, "Your Slack app's signing secret")
 	flag.Parse()
 
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		w.Write([]byte("It works!"))
+	})
+
 	http.HandleFunc("/receive", func(w http.ResponseWriter, r *http.Request) {
 
 		verifier, err := slack.NewSecretsVerifier(r.Header, signingSecret)
@@ -79,5 +84,11 @@ func main() {
 	})
 
 	fmt.Println("[INFO] Server listening")
-	http.ListenAndServe(":3000", nil)
+
+	port := os.Getenv("SERVER_PORT")
+	if len(port) == 0 {
+		port = "3000"
+	}
+
+	http.ListenAndServe(":"+port, nil)
 }
