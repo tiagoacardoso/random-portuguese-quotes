@@ -9,16 +9,48 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"reflect"
+	"strings"
 	"time"
 
 	"github.com/nlopes/slack"
 	"github.com/spf13/viper"
 )
 
+var (
+	api           *slack.Client
+	signingSecret string
+)
+
+func sendMessage(channelID string, text string) {
+	_, _, err := api.PostMessage(
+		channelID,
+		slack.MsgOptionText(text, false),
+	)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("Message successfully sent to channel " + channelID)
+}
+
+func snakeCaseToSentence(txt string) string {
+	txt = strings.ToLower(txt)
+
+	split := strings.Split(txt, "_")
+	var slice []string
+	for _, word := range split {
+		c := strings.ToUpper(string(word[0]))
+		slice = append(slice, c+word[1:])
+	}
+
+	return strings.Join(slice, " ")
+}
+
 func main() {
 	slackToken := os.Getenv("SLACK_TOKEN")
 	slackSigningKey := os.Getenv("SLACK_SIGNING_KEY")
-	api := slack.New(slackToken)
+	api = slack.New(slackToken)
 
 	viper.SetConfigFile("messages.json")
 	if err := viper.ReadInConfig(); err != nil {
@@ -26,10 +58,6 @@ func main() {
 	}
 
 	log.Println("Using messages config:", viper.ConfigFileUsed())
-
-	var (
-		signingSecret string
-	)
 
 	flag.StringVar(&signingSecret, "secret", slackSigningKey, "Your Slack app's signing secret")
 	flag.Parse()
@@ -61,22 +89,30 @@ func main() {
 
 		switch s.Command {
 		case "/randomportuguesequote":
-
-			messages := viper.GetStringSlice("messages")
+			messages := viper.GetStringSlice("random")
 
 			rand.Seed(time.Now().UnixNano())
 			randIndex := rand.Intn(len(messages))
 
-			_, _, err := api.PostMessage(
-				s.ChannelID,
-				slack.MsgOptionText(messages[randIndex], false),
-				slack.MsgOptionAttachments(slack.Attachment{}),
-			)
-			if err != nil {
-				log.Println(err)
+			sendMessage(s.ChannelID, messages[randIndex])
+			break
+		case "/randomauthorquote":
+			author := strings.Split(s.Text, " ")[0]
+
+			messages := viper.GetStringSlice("author." + author)
+
+			if len(messages) == 0 {
+				authors := viper.GetStringMap("author")
+				keys := reflect.ValueOf(authors).MapKeys()
+				sendMessage(s.UserID, fmt.Sprintf("Author %s not found, available authors: %v", author, keys))
 				return
 			}
-			log.Println("Message successfully sent to channel " + s.ChannelID)
+
+			rand.Seed(time.Now().UnixNano())
+			randIndex := rand.Intn(len(messages))
+
+			sendMessage(s.ChannelID, fmt.Sprintf("\"%s\" - %s", messages[randIndex], snakeCaseToSentence(author)))
+			break
 		default:
 			log.Println("Command not found...")
 			return
